@@ -1,5 +1,9 @@
 function reqBodyCheck(req, res, next) {
+  // res.set("Access-Control-Allow-Origin", "http://localhost:5173");
+
   if (!req.body) res.status(400).json({ message: "No Body Detected" });
+
+  console.log(req.body);
 
   const { priceLimits, currency, itemToSearch, sitesToSearch } = req.body;
 
