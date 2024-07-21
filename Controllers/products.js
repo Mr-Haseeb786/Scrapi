@@ -57,6 +57,8 @@ async function handleSearchProducts(req, res) {
   res.json({ message: "Got it!", commulativeProds });
 }
 
+// Function to retry incase of error
+
 async function retrierFunc(retries, maxRetries, searchSiteFunc) {
   let productsData = null;
   try {
@@ -73,6 +75,8 @@ async function retrierFunc(retries, maxRetries, searchSiteFunc) {
     return (productsData = null);
   }
 }
+
+// individual Searching Functions
 
 async function searchAmazon() {
   let browser = null;
