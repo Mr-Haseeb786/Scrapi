@@ -1,8 +1,38 @@
 const express = require("express");
 const prodSearchRouter = require("./Routes/products");
+const {
+  connectToDB,
+  insertUser,
+  getUserByName,
+  addFavourites,
+} = require("./utils/dbHandlers");
 require("dotenv").config();
 
+connectToDB(process.env.DB_URL)
+  .then(() => console.log("Connection Successful!"))
+  .catch(() => console.log("Failed to connect to Db"));
+
 const app = express();
+
+// const user = {
+//   userName: "Bawa",
+//   email: "@gmail",
+//   passwordHash: "THA",
+//   salt: "DHA",
+// };
+
+// const prodInfo = {
+//   title: "doodh",
+//   imgLink: "google",
+//   price: 200,
+//   linkToProduct: "amazon",
+//   producOriginSite: "alibaba",
+//   reviews: 300,
+//   ratings: 900,
+// };
+
+// insertUser(user);
+// getUserByName("Bawa");
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json({ extended: true }));
