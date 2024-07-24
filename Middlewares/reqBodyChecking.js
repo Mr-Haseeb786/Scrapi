@@ -62,6 +62,31 @@ function reqBodyCheck(req, res, next) {
   return;
 }
 
+function userReqBodyCheck(req, res, next) {
+  const body = req.body;
+
+  if (req.method != "POST") {
+    console.log("DId not interfere!");
+    next();
+  }
+
+  if (!body) return res.json({ message: "No Request Body Found" });
+
+  const { username, email, password } = body;
+
+  if (!username || !email || !password)
+    return res.json({ message: "No username or email or password provided" });
+
+  if (password.length < 7)
+    return res.json({ message: "Password length must be greater than 7" });
+
+  if (username.length < 5)
+    return res.json({ message: "Username must be more than 4 characters" });
+
+  next();
+}
+
 module.exports = {
   reqBodyCheck,
+  userReqBodyCheck,
 };

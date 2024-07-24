@@ -7,32 +7,23 @@ async function connectToDB(url) {
 }
 
 async function insertUser(user) {
-  const { userName, email, salt, passwordHash } = user;
+  const { username, email, passwordHash } = user;
 
-  try {
-    const newUser = await UserModel.create({
-      userName,
-      email,
-      salt,
-      passwordHash,
-    });
-
-    console.log("Insetion Successful");
-    console.log(newUser);
-  } catch (error) {
-    console.log("Error Inserting in Database ", error);
-  }
-  return;
-}
-
-async function getUserByName(userName) {
-  const user = await UserModel.findOne({
-    userName,
+  const newUser = await UserModel.create({
+    username,
+    email,
+    passwordHash,
   });
 
-  console.log(user);
+  return newUser;
+}
 
-  return;
+async function getUserByEmail(email) {
+  const user = await UserModel.findOne({
+    email,
+  });
+
+  return user;
 }
 
 async function addFavourites(userId, prodInfo) {
@@ -64,4 +55,4 @@ async function addFavourites(userId, prodInfo) {
   }
 }
 
-module.exports = { connectToDB, insertUser, getUserByName, addFavourites };
+module.exports = { connectToDB, insertUser, getUserByEmail, addFavourites };

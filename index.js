@@ -1,5 +1,6 @@
 const express = require("express");
 const prodSearchRouter = require("./Routes/products");
+const userRouter = require("./Routes/user");
 const {
   connectToDB,
   insertUser,
@@ -38,6 +39,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json({ extended: true }));
 
 app.use("/api/v1/products", prodSearchRouter);
+app.use("/api/v1/user", userRouter);
 
 app.get("/api", (req, res) => {
   console.log(req.body);
