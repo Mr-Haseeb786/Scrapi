@@ -1,16 +1,12 @@
 const bcrypt = require("bcryptjs");
+const { createJwtToken, verifyToken } = require("./utils/jwtAuth");
 
-async function hashPass() {
-  const pass = "Password";
-  const salt = await bcrypt.genSalt(10);
-  const hash = await bcrypt.hash(pass, 10);
+function hashPass() {
+  const token = createJwtToken({ username: "Bawa", pass: "Qadra" });
+  console.log(token);
 
-  console.log(salt);
-  console.log(hash);
-
-  // const matchRes = await bcrypt.compare("Password", hash);
-
-  // console.log(matchRes);
+  const res = verifyToken(token);
+  console.log(res);
 }
 
 hashPass();

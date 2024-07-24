@@ -37,22 +37,18 @@ async function addFavourites(userId, prodInfo) {
     ratings,
   } = prodInfo;
 
-  try {
-    const favProd = await favProductsModel.create({
-      title,
-      imgLink,
-      price,
-      linkToProduct,
-      producOriginSite,
-      reviews,
-      ratings,
-      favouritedBy: userId,
-    });
+  const favProd = await favProductsModel.create({
+    title,
+    imgLink,
+    price,
+    linkToProduct,
+    producOriginSite,
+    reviews,
+    ratings,
+    favouritedBy: userId,
+  });
 
-    console.log(favProd);
-  } catch (error) {
-    console.log("Error faving a product");
-  }
+  return favProd;
 }
 
 module.exports = { connectToDB, insertUser, getUserByEmail, addFavourites };

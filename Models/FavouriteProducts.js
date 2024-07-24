@@ -32,6 +32,7 @@ const favProductsSchema = new Schema(
     favouritedBy: {
       type: Schema.Types.ObjectId,
       ref: "users",
+      required: true,
     },
   },
   { timestamps: true }
