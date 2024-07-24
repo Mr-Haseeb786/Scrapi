@@ -22,7 +22,6 @@ async function getUserByEmail(email) {
   const user = await UserModel.findOne({
     email,
   });
-
   return user;
 }
 
@@ -50,5 +49,17 @@ async function addFavourites(userId, prodInfo) {
 
   return favProd;
 }
+async function getUserFavourites(userId) {
+  const favProducts = await favProductsModel.find({
+    favouritedBy: userId,
+  });
 
-module.exports = { connectToDB, insertUser, getUserByEmail, addFavourites };
+  return favProducts;
+}
+module.exports = {
+  connectToDB,
+  insertUser,
+  getUserByEmail,
+  addFavourites,
+  getUserFavourites,
+};

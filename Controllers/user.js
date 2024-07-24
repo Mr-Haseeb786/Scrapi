@@ -3,9 +3,9 @@ const {
   insertUser,
   getUserByEmail,
   addFavourites,
+  getUserFavourites,
 } = require("../utils/dbHandlers");
 const { createJwtToken, verifyToken } = require("../utils/jwtAuth");
-const { UserModel } = require("../Models/User");
 
 async function handleRegistNewUser(req, res) {
   const { username, password, email } = req.body;
@@ -21,14 +21,15 @@ async function handleRegistNewUser(req, res) {
   };
 
   try {
-    const emailExists = await UserModel.findOne({
-      email,
-    });
+    const emailExists = await getUserByEmail(email);
 
     if (emailExists)
       return res.status(400).json({ error: "Email Already exists" });
   } catch (error) {
-    console.log("An error occured");
+    console.log("An error occured ", error);
+    return res
+      .status(500)
+      .json({ error: "An Error Occurred Please try later" });
   }
 
   try {
@@ -74,7 +75,33 @@ async function handleUserSignIn(req, res) {
   }
 }
 
-async function handleGetUserFavourites(req, res) {}
+async function handleGetUserFavourites(req, res) {
+  let token = null;
+
+  token = req.cookies.token;
+
+  if (!token)
+    return res.status(401).json({
+      error: "You need to be Logged In to view your favourite products",
+    });
+
+  let user = null;
+  try {
+    user = verifyToken(token);
+  } catch (error) {
+    console.log("Invalid Token");
+    res.status(401).json({ error: "Please Log in" });
+  }
+
+  // db query to get favourites
+  try {
+    const favProducts = getUserFavourites(user.userId);
+
+    return res.status(200).json({ favProducts });
+  } catch (error) {
+    console.log("There was an error ", error);
+  }
+}
 
 async function handleSetUserFavourites(req, res) {
   const {
