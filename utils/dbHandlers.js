@@ -50,9 +50,11 @@ async function addFavourites(userId, prodInfo) {
   return favProd;
 }
 async function getUserFavourites(userId) {
+  console.log(userId);
   const favProducts = await favProductsModel.find({
     favouritedBy: userId,
   });
+  console.log("Fav Prods: ", favProducts);
 
   return favProducts;
 }

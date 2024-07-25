@@ -76,6 +76,7 @@ async function handleUserSignIn(req, res) {
 }
 
 async function handleGetUserFavourites(req, res) {
+  if (!req.body) return res.json({ error: "No Body" });
   let token = null;
 
   token = req.cookies.token;
@@ -93,9 +94,8 @@ async function handleGetUserFavourites(req, res) {
     res.status(401).json({ error: "Please Log in" });
   }
 
-  // db query to get favourites
   try {
-    const favProducts = getUserFavourites(user.userId);
+    const favProducts = await getUserFavourites(user.userId);
 
     return res.status(200).json({ favProducts });
   } catch (error) {
@@ -130,14 +130,13 @@ async function handleSetUserFavourites(req, res) {
 
   const { token } = req.cookies;
 
-  console.log(token);
+  if (!token) return res.status(401).json({ error: "User not logged in" });
 
   try {
     userDetails = verifyToken(token);
-    console.log(userDetails);
   } catch (error) {
     console.log(error);
-    return res.status(400).json({
+    return res.status(401).json({
       error:
         "Your Cookies have been cleared or altered. You need to login again to view Your Favourites",
     });
