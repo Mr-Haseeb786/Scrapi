@@ -1,6 +1,4 @@
 function reqBodyCheck(req, res, next) {
-  // res.set("Access-Control-Allow-Origin", "http://localhost:5173");
-
   if (!req.body) res.status(400).json({ message: "No Body Detected" });
 
   console.log(req.body);
@@ -66,22 +64,27 @@ function userReqBodyCheck(req, res, next) {
   const body = req.body;
 
   if (req.method != "POST") {
-    console.log("DId not interfere!");
     next();
   }
 
-  if (!body) return res.json({ message: "No Request Body Found" });
+  if (!body) return res.status(400).json({ error: "No Request Body Found" });
 
   const { username, email, password } = body;
 
   if (!username || !email || !password)
-    return res.json({ message: "No username or email or password provided" });
+    return res
+      .status(400)
+      .json({ error: "No username or email or password provided" });
 
-  if (password.length < 7)
-    return res.json({ message: "Password length must be greater than 7" });
+  if (password.length < 5)
+    return res
+      .status(400)
+      .json({ error: "Password length must be greater than 7" });
 
-  if (username.length < 5)
-    return res.json({ message: "Username must be more than 4 characters" });
+  if (username.length < 3)
+    return res
+      .status(400)
+      .json({ error: "Username must be more than 4 characters" });
 
   next();
 }

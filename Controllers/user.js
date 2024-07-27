@@ -7,6 +7,22 @@ const {
 } = require("../utils/dbHandlers");
 const { createJwtToken, verifyToken } = require("../utils/jwtAuth");
 
+let testing = 0;
+
+function handleUserValidation(req, res) {
+  const token = req.cookies.token;
+
+  if (!token)
+    return res.status(401).json({ error: "user not logged in", user: null });
+
+  const user = verifyToken(token);
+
+  testing++;
+
+  console.log(testing);
+  return res.json({ user });
+}
+
 async function handleRegistNewUser(req, res) {
   const { username, password, email } = req.body;
 
@@ -45,7 +61,7 @@ async function handleRegistNewUser(req, res) {
 }
 
 async function handleUserSignIn(req, res) {
-  const { email, password } = req.body;
+  const { email, password, signedInWithGoogle } = req.body;
 
   if (!email || !password)
     return res.status(400).json({ error: "No Email or Password Provided" });
@@ -53,7 +69,7 @@ async function handleUserSignIn(req, res) {
   try {
     const user = await getUserByEmail(email);
     if (!user)
-      return res.status(401).json({ error: "User Email Does not Exist" });
+      return res.status(401).json({ error: "This email is not registered" });
 
     const passwordMatched = await bcrypt.compare(password, user.passwordHash);
     if (!passwordMatched)
@@ -63,6 +79,7 @@ async function handleUserSignIn(req, res) {
       userId: user._id,
       username: user.username,
       email: user.email,
+      signedInWithGoogle,
     };
 
     const token = createJwtToken(userInfo);
@@ -73,6 +90,14 @@ async function handleUserSignIn(req, res) {
     console.log(error);
     res.status(500).json({ error: "Error searching for User" });
   }
+}
+
+async function handleUserSignOut(req, res) {
+  const token = req.cookies;
+
+  if (!token) return res.status(401).json({ error: "User not logged in" });
+
+  return res.clearCookie("token").json({ message: "Cookies cleared" });
 }
 
 async function handleGetUserFavourites(req, res) {
@@ -158,4 +183,6 @@ module.exports = {
   handleUserSignIn,
   handleGetUserFavourites,
   handleSetUserFavourites,
+  handleUserValidation,
+  handleUserSignOut,
 };
