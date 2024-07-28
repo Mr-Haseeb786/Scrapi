@@ -102,9 +102,8 @@ async function handleUserSignOut(req, res) {
 
 async function handleGetUserFavourites(req, res) {
   if (!req.body) return res.json({ error: "No Body" });
-  let token = null;
 
-  token = req.cookies.token;
+  const token = req.cookies.token;
 
   if (!token)
     return res.status(401).json({
@@ -163,14 +162,14 @@ async function handleSetUserFavourites(req, res) {
     console.log(error);
     return res.status(401).json({
       error:
-        "Your Cookies have been cleared or altered. You need to login again to view Your Favourites",
+        "Your Cookies have been cleared or altered. You need to login again to set Your Favourites",
     });
   }
 
   try {
     const favProduct = await addFavourites(userDetails.userId, req.body);
 
-    res
+    return res
       .status(201)
       .json({ message: "Added to Favourites", favProduct: favProduct._id });
   } catch (error) {

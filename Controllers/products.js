@@ -1,5 +1,6 @@
 const puppeteer = require("puppeteer-extra");
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
+const { getFromCache, setInCache } = require("../utils/redis/cacheHandlers");
 
 puppeteer.use(StealthPlugin());
 
@@ -13,13 +14,46 @@ async function handleSearchProducts(req, res) {
 
   let commulativeProds = [];
 
+  const productInfo = {
+    highPrice,
+    lowPrice,
+    itemToSearch,
+  };
+
+  // Getting from Cache
+  let sites = "";
+
+  sitesToSearch.forEach((e) => {
+    sites = sites.concat(e);
+  });
+
+  console.log(sites);
+
+  const productList = await getFromCache(itemToSearch.toLowerCase(), sites);
+
+  if (productList) {
+    productList.forEach((e) => {
+      commulativeProds.push(e);
+    });
+    return res.json({ commulativeProds });
+  }
+
+  console.log("Delaying");
+  await delay(2000);
+  console.log("Delay Ending");
+
   let error = "Could not get Products from: ";
 
   if (sitesToSearch.includes("AMAZON")) {
     console.log("Searching Amazon");
     retries = 0;
 
-    let productsData = await retrierFunc(retries, maxRetries, searchAmazon);
+    let productsData = await retrierFunc(
+      retries,
+      maxRetries,
+      searchAmazon,
+      productInfo
+    );
 
     if (productsData && Array.isArray(productsData)) {
       productsData.map((prod) => {
@@ -37,7 +71,12 @@ async function handleSearchProducts(req, res) {
 
     console.log("Searching Ali Express");
 
-    let productsData = await retrierFunc(retries, maxRetries, searchAliExpress);
+    let productsData = await retrierFunc(
+      retries,
+      maxRetries,
+      searchAliExpress,
+      productInfo
+    );
 
     // console.log(productsData);
 
@@ -53,16 +92,21 @@ async function handleSearchProducts(req, res) {
       error = error.concat("AliExpress");
     }
   }
+
+  if (commulativeProds.length !== 0) {
+    setInCache(itemToSearch.toLowerCase(), sites, commulativeProds);
+  }
+
   console.log(error);
   res.json({ message: "Got it!", commulativeProds });
 }
 
 // Function to retry incase of error
 
-async function retrierFunc(retries, maxRetries, searchSiteFunc) {
+async function retrierFunc(retries, maxRetries, searchSiteFunc, productInfo) {
   let productsData = null;
   try {
-    productsData = await searchSiteFunc();
+    productsData = await searchSiteFunc(productInfo);
     return productsData;
   } catch (error) {
     if (retries < maxRetries) {
@@ -78,9 +122,11 @@ async function retrierFunc(retries, maxRetries, searchSiteFunc) {
 
 // individual Searching Functions
 
-async function searchAmazon() {
+async function searchAmazon(productInfo) {
   let browser = null;
   let page = null;
+
+  const { maxPrice, minPrice, productName } = productInfo;
 
   throw new Error("There was an error");
 
@@ -122,9 +168,11 @@ async function searchAmazon() {
   await browser.close();
 }
 
-async function searchAliExpress() {
+async function searchAliExpress(productInfo) {
   let browser = null;
   let page = null;
+
+  const { maxPrice, minPrice, productName } = productInfo;
 
   // throw new Error("There was an error please try again ");
   let productsData = [

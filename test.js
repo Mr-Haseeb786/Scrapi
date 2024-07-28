@@ -1,12 +1,37 @@
-const bcrypt = require("bcryptjs");
-const { createJwtToken, verifyToken } = require("./utils/jwtAuth");
+const { createClient } = require("redis");
+const client = createClient();
 
-function hashPass() {
-  const token = createJwtToken({ username: "Bawa", pass: "Qadra" });
-  console.log(token);
+const products = [
+  {
+    id: 1,
+    name: "powder",
+    price: 200,
+  },
+  {
+    id: 2,
+    name: "chowder",
+    price: 4000,
+  },
+];
 
-  const res = verifyToken(token);
-  console.log(res);
+async function testing() {
+  try {
+    await client.connect();
+
+    await client.json.set(
+      "productsJson",
+      "$ratings",
+      JSON.stringify({ ratings: 300 })
+    );
+    console.log("Connected");
+
+    const results = await client.json.get("productsJson", "$");
+    const ratings = await client.json.get("productsJson", "$ratings");
+
+    console.log(results, ratings);
+  } catch (error) {
+    console.log(error);
+  }
 }
 
-hashPass();
+testing();

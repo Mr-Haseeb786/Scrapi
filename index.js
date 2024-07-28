@@ -6,12 +6,15 @@ const validationRouter = require("./Routes/validation");
 
 const { connectToDB } = require("./utils/dbHandlers");
 const cookieParser = require("cookie-parser");
+const { connectToRedis } = require("./utils/redis/connectToRedis");
 
 require("dotenv").config();
 
 connectToDB(process.env.DB_URL)
-  .then(() => console.log("Connection Successful!"))
+  .then(() => console.log("Connection to DB Successful!"))
   .catch(() => console.log("Failed to connect to Db"));
+
+connectToRedis();
 
 const app = express();
 
