@@ -1,23 +1,15 @@
-const puppeteer = require("puppeteer-extra");
-const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 const { getFromCache, setInCache } = require("../utils/redis/cacheHandlers");
-
-puppeteer.use(StealthPlugin());
+const { startScrapping } = require("../utils/puppeteer/puppeteerHandlers");
 
 async function handleSearchProducts(req, res) {
   const { priceLimits, currency, itemToSearch, sitesToSearch } = req.body;
 
   const { highPrice, lowPrice } = priceLimits;
 
-  let retries = 0;
-  let maxRetries = 1;
-
-  let commulativeProds = [];
-
-  const productInfo = {
-    highPrice,
-    lowPrice,
-    itemToSearch,
+  const searchItem = {
+    itemName: itemToSearch,
+    minPrice: highPrice,
+    maxPrice: lowPrice,
   };
 
   // Getting from Cache
@@ -29,95 +21,24 @@ async function handleSearchProducts(req, res) {
 
   console.log(sites);
 
-  const productList = await getFromCache(itemToSearch.toLowerCase(), sites);
+  // const productList = await getFromCache(itemToSearch.toLowerCase(), sites);
 
-  if (productList) {
-    productList.forEach((e) => {
-      commulativeProds.push(e);
-    });
-    return res.json({ commulativeProds });
-  }
+  // if (productList) {
+  //   return res.json({ products: productList });
+  // }
 
-  console.log("Delaying");
-  await delay(2000);
-  console.log("Delay Ending");
+  console.log("Passed DB Check");
+  const { allProducts, error } = await startScrapping(
+    searchItem,
+    sitesToSearch
+  );
 
-  let error = "Could not get Products from: ";
-
-  if (sitesToSearch.includes("AMAZON")) {
-    console.log("Searching Amazon");
-    retries = 0;
-
-    let productsData = await retrierFunc(
-      retries,
-      maxRetries,
-      searchAmazon,
-      productInfo
-    );
-
-    if (productsData && Array.isArray(productsData)) {
-      productsData.map((prod) => {
-        commulativeProds.push(prod);
-      });
-    }
-
-    if (!productsData) {
-      error = error.concat("Amazon ");
-    }
-  }
-
-  if (sitesToSearch.includes("ALIEXPRESS")) {
-    retries = 0;
-
-    console.log("Searching Ali Express");
-
-    let productsData = await retrierFunc(
-      retries,
-      maxRetries,
-      searchAliExpress,
-      productInfo
-    );
-
-    // console.log(productsData);
-
-    if (productsData && Array.isArray(productsData)) {
-      console.log("prodsDta is Array");
-
-      productsData.map((singleProduct) => {
-        commulativeProds.push(singleProduct);
-      });
-    }
-
-    if (!productsData) {
-      error = error.concat("AliExpress");
-    }
-  }
-
-  if (commulativeProds.length !== 0) {
-    setInCache(itemToSearch.toLowerCase(), sites, commulativeProds);
-  }
+  // if (allProducts.length !== 0) {
+  //   setInCache(itemToSearch.toLowerCase(), sites, allProducts);
+  // }
 
   console.log(error);
-  res.json({ message: "Got it!", commulativeProds });
-}
-
-// Function to retry incase of error
-
-async function retrierFunc(retries, maxRetries, searchSiteFunc, productInfo) {
-  let productsData = null;
-  try {
-    productsData = await searchSiteFunc(productInfo);
-    return productsData;
-  } catch (error) {
-    if (retries < maxRetries) {
-      retries++;
-      console.log("Error Occured Retrying: " + retries);
-      delay(600);
-      retrierFunc(retries, maxRetries, searchSiteFunc);
-      return;
-    }
-    return (productsData = null);
-  }
+  res.json({ message: "Got it!", products: allProducts });
 }
 
 // individual Searching Functions
@@ -166,24 +87,6 @@ async function searchAmazon(productInfo) {
 
   await page.screenshot({ path: "ali.png" });
   await browser.close();
-}
-
-async function searchAliExpress(productInfo) {
-  let browser = null;
-  let page = null;
-
-  const { maxPrice, minPrice, productName } = productInfo;
-
-  // throw new Error("There was an error please try again ");
-  let productsData = [
-    {
-      id: 1,
-      name: "prod 4",
-      price: 200,
-    },
-  ];
-
-  return productsData;
 }
 
 async function delay(time) {

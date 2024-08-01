@@ -4,20 +4,16 @@ const puppeteer = require("puppeteer-extra");
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 puppeteer.use(StealthPlugin());
 
-console.log("Started");
-
 function delay(time) {
   return new Promise(function (resolve) {
     setTimeout(resolve, time);
   });
 }
 
-async function startScrapping() {
-  const productInfo = {
-    itemName: "Flashlight",
-    minPrice: 10,
-    maxPrice: 200,
-  };
+async function startScrapping(itemToSearch, sitesToSearch) {
+  console.log("Started");
+
+  let error = "Could not get Products from: ";
 
   const browser = await puppeteer.launch({
     headless: false,
@@ -26,15 +22,71 @@ async function startScrapping() {
       "C:/Users/Muhammad Haseeb/AppData/Local/Google/Chrome/User Data/Profile 3",
   });
 
-  const amazonProdsArray = await searchAmazon(productInfo, browser);
-  const aliexpressProdsArray = await searchAliExpress(productInfo, browser);
-  const darazProdsArray = await searchDaraz(productInfo, browser);
+  let allProducts = [];
 
-  console.log("Products from Amazon: ", amazonProdsArray);
-  console.log("Products from aliexpress:", aliexpressProdsArray);
-  console.log("Products from daraz: ", darazProdsArray);
+  // Searching Amazon
+
+  if (sitesToSearch.includes("AMAZON")) {
+    console.log("Searching Amazon");
+    retries = 0;
+
+    try {
+      const productsData = await searchAmazon(itemToSearch, browser);
+
+      if (productsData && Array.isArray(productsData)) {
+        productsData.map((prod) => {
+          allProducts.push(prod);
+        });
+      }
+    } catch (error) {
+      console.log(error);
+      error = error.concat("Amazon ");
+    }
+  }
+
+  // searching AliExpress
+
+  if (sitesToSearch.includes("ALIEXPRESS")) {
+    console.log("Searching Ali Express");
+
+    try {
+      const productsData = await searchAliExpress(itemToSearch, browser);
+
+      if (productsData && Array.isArray(productsData)) {
+        console.log("prodsDta is Array");
+
+        productsData.map((singleProduct) => {
+          allProducts.push(singleProduct);
+        });
+      }
+    } catch (error) {
+      console.log(error);
+      error = error.concat("AliExpress");
+    }
+  }
+
+  // searching daraz
+
+  if (sitesToSearch.includes("DARAZ")) {
+    console.log("Searching Daraz");
+
+    try {
+      const productsData = await searchDaraz(itemToSearch, browser);
+      if (productsData && Array.isArray(productsData)) {
+        console.log("prodsDta is Array");
+
+        productsData.map((singleProduct) => {
+          allProducts.push(singleProduct);
+        });
+      }
+    } catch (error) {
+      error = error.concat("Daraz");
+    }
+  }
 
   await browser.close();
+
+  return { allProducts, error };
 }
 
 function priceToRuppee(dollarPrice) {
@@ -84,17 +136,17 @@ async function searchAmazon(searchItem, browser) {
   for (const titleDiv of titleDivs) {
     const singleProduct = await page.evaluate((el) => {
       let prodPrice = null;
-      let productTitle = "";
       let productLink = "";
-      let imgLink = "";
+      let productTitle = "";
       let prodReveiws = null;
+      let productImgLink = "";
       let prodRatings = null;
 
       try {
-        imgLink = el.querySelector(".s-image").getAttribute("src");
+        productImgLink = el.querySelector(".s-image").getAttribute("src");
       } catch (error) {}
 
-      if (!imgLink) return null;
+      if (!productImgLink) return null;
 
       try {
         productLink = el
@@ -148,9 +200,9 @@ async function searchAmazon(searchItem, browser) {
       }
 
       return {
-        productTitle,
-        imgLink,
         productLink,
+        productTitle,
+        productImgLink,
         prodPrice,
         prodRatings,
         prodReveiws,
@@ -298,9 +350,10 @@ async function searchAliExpress(searchItem, browser) {
       return {
         prodLink,
         productTitle,
-        prodPrice,
-        prodReviews,
         productImgLink,
+        prodPrice,
+        prodRatings: null,
+        prodReviews,
         originSite: "ALIEXPRESS",
       };
     }, item);
@@ -367,9 +420,7 @@ async function searchDaraz(searchItem, browser) {
       let prodPrice = null;
       let prodLink = "";
       let productTitle = "";
-      let prodReviews = null;
       let productImgLink = "";
-      let salePrice = "";
 
       function priceToDollar(ruppeePrice) {
         const dollarPrice = ruppeePrice / 278;
@@ -412,9 +463,10 @@ async function searchDaraz(searchItem, browser) {
 
       return {
         prodLink,
-        productImgLink,
         productTitle,
+        productImgLink,
         prodPrice,
+        prodRating: null,
         prodReviews: null,
         originSite: "DARAZ",
       };
@@ -431,4 +483,4 @@ async function searchDaraz(searchItem, browser) {
   return ProductsInfo;
 }
 
-startScrapping();
+module.exports = { startScrapping };

@@ -39,11 +39,12 @@ function reqBodyCheck(req, res, next) {
 
   const amazonPresent = sitesToSearch.includes("AMAZON");
   const aliExpressPresent = sitesToSearch.includes("ALIEXPRESS");
+  const darazPresent = sitesToSearch.includes("DARAZ");
 
-  if (!amazonPresent && !aliExpressPresent) {
+  if (!amazonPresent && !aliExpressPresent && !darazPresent) {
     return res
       .status(400)
-      .json({ message: "Available sites are AMAZON and ALIEXPRESS" });
+      .json({ message: "Available sites are AMAZON, ALIEXPRESS and DARAZ" });
   }
 
   if (itemToSearch.length < 2) {
