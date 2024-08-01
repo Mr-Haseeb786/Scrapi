@@ -12,84 +12,11 @@ function delay(time) {
   });
 }
 
-async function startScrapping() {
-  const browser = await puppeteer.launch({
-    // headless: false,
-    executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe",
-    userDataDir:
-      "C:/Users/Muhammad Haseeb/AppData/Local/Google/Chrome/User Data/Profile 2",
-  });
-  const page = await browser.newPage();
-  await page.goto(`https://amazon.com/`, { waitUntil: "networkidle2" });
+async function startScrapping() {}
 
-  // console.log("On page waiting...");
-  // await delay(1300);
-  // await page.click('input[aria-label="Search Amazon"]');
-  await page.type('input[aria-label="Search Amazon"]', "speakers");
-  await delay(800);
-  // await page.click(".search-box__button--1oH7");
-  await page.click(".nav-search-submit");
-  await page.waitForNavigation({ waitUntil: "networkidle2" });
-  // console.log("Searched Element");
-  // await delay(2000);
-  // const parentElement = await page.$('[aria-label="Product"]');
-  // console.log("Caught element");
-  // await delay(6000);
-  await page.waitForSelector(".s-card-container");
-  await page.waitForSelector(".s-image");
-  const titleDivs = await page.$$(".s-card-container");
+async function searchAmazon(searchItem, browser) {
+  const { itemName, minPrice, maxPrice } = searchItem;
 
-  let titleArray = [];
-  let prodPrice = "";
-  let productTitle = "";
-  let productLink = "";
-  let imgLink = "";
-
-  for (const titleDiv of titleDivs) {
-    const singleProduct = await page.evaluate((el) => {
-      try {
-        imgLink = el.querySelector(".s-image").getAttribute("src");
-      } catch (error) {}
-
-      try {
-        productLink = el
-          .querySelector("div > div > span > a")
-          .getAttribute("href");
-      } catch (error) {}
-
-      if (!productLink) return null;
-
-      if (!productLink.startsWith("https"))
-        productLink = `https://amazon.com${productLink}`;
-
-      try {
-        productTitle = el.querySelector(
-          '[data-cy="title-recipe"] > h2 > a > span'
-        ).textContent;
-      } catch (error) {}
-
-      if (!productTitle) return null;
-
-      try {
-        prodPrice = el.querySelector(
-          '[data-cy="price-recipe"] > div > div > a > span > span'
-        ).textContent;
-      } catch (error) {}
-
-      return { productTitle, imgLink, productLink, prodPrice };
-    }, titleDiv);
-
-    if (singleProduct) titleArray.push(singleProduct);
-  }
-
-  console.log(titleArray);
-
-  await page.screenshot({ path: "testing-product.png" });
-  console.log("Finished Scrapping");
-  await browser.close();
-}
-
-async function searchWithPrice() {
   const browser = await puppeteer.launch({
     headless: false,
     executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe",
@@ -105,7 +32,7 @@ async function searchWithPrice() {
 
   await page.waitForSelector('input[aria-label="Search Amazon"]');
 
-  await page.type('input[aria-label="Search Amazon"]', "speakers");
+  await page.type('input[aria-label="Search Amazon"]', searchItem);
   await delay(800);
 
   await page.click(".nav-search-submit");
@@ -114,8 +41,8 @@ async function searchWithPrice() {
   await page.waitForSelector('input[name="high-price"]');
 
   await page.evaluate(() => {
-    document.querySelector('input[name="high-price"]').value = 90;
-    document.querySelector('input[name="low-price"]').value = 20;
+    document.querySelector('input[name="high-price"]').value = `${maxPrice}`;
+    document.querySelector('input[name="low-price"]').value = `${minPrice}`;
   });
 
   await delay(500);
@@ -128,6 +55,7 @@ async function searchWithPrice() {
   const titleDivs = await page.$$(".s-card-container");
 
   let titleArray = [];
+  let prevProdLink = "";
 
   for (const titleDiv of titleDivs) {
     const singleProduct = await page.evaluate((el) => {
@@ -139,6 +67,8 @@ async function searchWithPrice() {
       try {
         imgLink = el.querySelector(".s-image").getAttribute("src");
       } catch (error) {}
+
+      if (!imgLink) return null;
 
       try {
         productLink = el
@@ -168,18 +98,24 @@ async function searchWithPrice() {
       return { productTitle, imgLink, productLink, prodPrice };
     }, titleDiv);
 
-    if (singleProduct) titleArray.push(singleProduct);
+    if (singleProduct) {
+      if (prevProdLink === singleProduct.productLink) continue;
+
+      prevProdLink = singleProduct.productLink;
+
+      titleArray.push(singleProduct);
+    }
   }
 
   console.log(titleArray);
 
-  // await browser.close();
+  await browser.close();
+
+  return titleArray;
 }
 
-// searchWithPrice();
-
-async function visitAliExpress(productInfo) {
-  const { prodName, maxPrice, minPrice } = productInfo;
+async function searchAliExpress(searchItem, browser) {
+  const { prodName, maxPrice, minPrice } = searchItem;
 
   const browser = await puppeteer.launch({ headless: true });
   const page = await browser.newPage();
@@ -222,6 +158,7 @@ async function visitAliExpress(productInfo) {
   const items = await page.$$(".search-item-card-wrapper-gallery");
 
   let ProductsInfo = [];
+  let prevProdLink = "";
 
   for (const item of items) {
     const singleItem = await page.evaluate((el) => {
@@ -235,7 +172,7 @@ async function visitAliExpress(productInfo) {
       try {
         prodLink = el.querySelector(".search-card-item").getAttribute("href");
       } catch (error) {
-        console.log("Did not get the image");
+        return null;
       }
 
       try {
@@ -243,7 +180,7 @@ async function visitAliExpress(productInfo) {
           .querySelector(".images--item--3XZa6xf")
           .getAttribute("alt");
       } catch (error) {
-        console.log("Did not get product title");
+        return null;
       }
 
       try {
@@ -261,7 +198,7 @@ async function visitAliExpress(productInfo) {
           }
         });
       } catch (error) {
-        console.log("Node error");
+        return null;
       }
 
       try {
@@ -278,8 +215,7 @@ async function visitAliExpress(productInfo) {
 
         prodReviews = parseInt(stringProdReviews);
       } catch (error) {
-        console.log("Did not get the reviews");
-        prodReviews = 0;
+        prodReviews = null;
       }
 
       try {
@@ -287,7 +223,7 @@ async function visitAliExpress(productInfo) {
           .querySelector(".images--item--3XZa6xf")
           .getAttribute("src");
       } catch (error) {
-        console.log("Did not get an Image");
+        return null;
       }
 
       if (salePrice) {
@@ -303,17 +239,24 @@ async function visitAliExpress(productInfo) {
       };
     }, item);
 
-    ProductsInfo.push(singleItem);
+    if (singleItem) {
+      if (prevProdLink === singleItem.prodLink) continue;
+
+      prevProdLink = singleItem.prodLink;
+
+      ProductsInfo.push(singleItem);
+    }
   }
 
   console.log(ProductsInfo);
 
-  console.log("DOne");
-  console.log("Gotcha");
-  return await browser.close();
+  await browser.close();
+  return ProductsInfo;
 }
 
-async function visitDaraz() {
+async function searchDaraz(searchItem, browser) {
+  const { itemName, minPrice, maxPrice } = searchItem;
+
   const browser = await puppeteer.launch({
     headless: false,
     executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe",
@@ -329,7 +272,7 @@ async function visitDaraz() {
 
   await page.waitForSelector('input[type="search"]');
 
-  await page.type('input[type="search"]', "speakers");
+  await page.type('input[type="search"]', itemName);
   await delay(900);
 
   await page.click(".search-box__button--1oH7");
@@ -338,8 +281,8 @@ async function visitDaraz() {
   await page.waitForSelector('input[placeholder="Min"]');
   await page.waitForSelector('input[placeholder="Max"]');
 
-  await page.type('input[placeholder="Min"]', `800`);
-  await page.type('input[placeholder="Max"]', `3000`);
+  await page.type('input[placeholder="Min"]', `${minPrice}`);
+  await page.type('input[placeholder="Max"]', `${maxPrice}`);
 
   await delay(700);
 
@@ -393,6 +336,8 @@ async function visitDaraz() {
         console.log("Did not get the price");
       }
 
+      if (!prodLink || !productImgLink || !productTitle) return null;
+
       return {
         prodLink,
         productImgLink,
@@ -407,10 +352,13 @@ async function visitDaraz() {
     }
 
     prevProdLink = singleProduct.prodLink;
-    ProductsInfo.push(singleProduct);
+
+    if (singleProduct) ProductsInfo.push(singleProduct);
   }
 
   console.log(ProductsInfo);
+
+  return ProductsInfo;
 }
 
 const productInfo = {
