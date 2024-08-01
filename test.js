@@ -12,10 +12,12 @@ function delay(time) {
   });
 }
 
-async function startScrapping() {}
-
-async function searchAmazon(searchItem, browser) {
-  const { itemName, minPrice, maxPrice } = searchItem;
+async function startScrapping() {
+  const productInfo = {
+    itemName: "Flashlight",
+    minPrice: 10,
+    maxPrice: 200,
+  };
 
   const browser = await puppeteer.launch({
     headless: false,
@@ -23,6 +25,22 @@ async function searchAmazon(searchItem, browser) {
     userDataDir:
       "C:/Users/Muhammad Haseeb/AppData/Local/Google/Chrome/User Data/Profile 3",
   });
+
+  const amazonProdsArray = await searchAmazon(productInfo, browser);
+  const aliexpressProdsArray = await searchAliExpress(productInfo, browser);
+  const darazProdsArray = await searchDaraz(productInfo, browser);
+
+  console.log("Products from Amazon: ", amazonProdsArray);
+  console.log("Products from aliexpress:", aliexpressProdsArray);
+  console.log("Products from daraz: ", darazProdsArray);
+}
+
+function priceToRuppee(dollarPrice) {
+  return dollarPrice * 279;
+}
+
+async function searchAmazon(searchItem, browser) {
+  const { itemName, minPrice, maxPrice } = searchItem;
 
   const page = await browser.newPage();
 
@@ -32,7 +50,7 @@ async function searchAmazon(searchItem, browser) {
 
   await page.waitForSelector('input[aria-label="Search Amazon"]');
 
-  await page.type('input[aria-label="Search Amazon"]', searchItem);
+  await page.type('input[aria-label="Search Amazon"]', itemName);
   await delay(800);
 
   await page.click(".nav-search-submit");
@@ -40,10 +58,14 @@ async function searchAmazon(searchItem, browser) {
 
   await page.waitForSelector('input[name="high-price"]');
 
-  await page.evaluate(() => {
-    document.querySelector('input[name="high-price"]').value = `${maxPrice}`;
-    document.querySelector('input[name="low-price"]').value = `${minPrice}`;
-  });
+  await page.evaluate(
+    (maxPrice, minPrice) => {
+      document.querySelector('input[name="high-price"]').value = `${maxPrice}`;
+      document.querySelector('input[name="low-price"]').value = `${minPrice}`;
+    },
+    maxPrice,
+    minPrice
+  );
 
   await delay(500);
   await page.click('[aria-label="Go - Submit price range"]');
@@ -59,10 +81,12 @@ async function searchAmazon(searchItem, browser) {
 
   for (const titleDiv of titleDivs) {
     const singleProduct = await page.evaluate((el) => {
-      let prodPrice = "";
+      let prodPrice = null;
       let productTitle = "";
       let productLink = "";
       let imgLink = "";
+      let prodReveiws = null;
+      let prodRatings = null;
 
       try {
         imgLink = el.querySelector(".s-image").getAttribute("src");
@@ -90,12 +114,46 @@ async function searchAmazon(searchItem, browser) {
       if (!productTitle) return null;
 
       try {
-        prodPrice = el.querySelector(
+        let prodPriceString = el.querySelector(
           '[data-cy="price-recipe"] > div > div > a > span > span'
         ).textContent;
+
+        prodPrice = parseFloat(prodPriceString.split("$")[1]);
       } catch (error) {}
 
-      return { productTitle, imgLink, productLink, prodPrice };
+      try {
+        let prodRatingsString = el.querySelector(
+          '[data-cy="reviews-ratings-slot"] > span'
+        ).innerHTML;
+
+        prodRatingsString = prodRatingsString.split(" ")[0];
+        prodRatings = parseFloat(prodRatingsString);
+      } catch (error) {
+        console.log(error);
+      }
+
+      try {
+        let prodReviewsString = el
+          .querySelector('[data-csa-c-slot-id="alf-reviews"] > span')
+          .getAttribute("aria-label");
+
+        prodReviewsString = prodReviewsString.split(" ")[0];
+        prodReviewsString = prodReviewsString.replace(/,/g, "");
+
+        prodReveiws = parseInt(prodReviewsString);
+      } catch (error) {
+        console.log(error);
+      }
+
+      return {
+        productTitle,
+        imgLink,
+        productLink,
+        prodPrice,
+        prodRatings,
+        prodReveiws,
+        originSite: "AMAZON",
+      };
     }, titleDiv);
 
     if (singleProduct) {
@@ -107,17 +165,15 @@ async function searchAmazon(searchItem, browser) {
     }
   }
 
-  console.log(titleArray);
-
-  await browser.close();
-
   return titleArray;
 }
 
 async function searchAliExpress(searchItem, browser) {
-  const { prodName, maxPrice, minPrice } = searchItem;
+  let { itemName, maxPrice, minPrice } = searchItem;
 
-  const browser = await puppeteer.launch({ headless: true });
+  maxPrice = priceToRuppee(maxPrice);
+  minPrice = priceToRuppee(minPrice);
+
   const page = await browser.newPage();
 
   await page.setDefaultNavigationTimeout(90000);
@@ -130,7 +186,7 @@ async function searchAliExpress(searchItem, browser) {
   //   console.log("the modal did not open");
   // }
 
-  await page.type("#search-words", prodName);
+  await page.type("#search-words", itemName);
   await delay(500);
   await page.click(".search--submit--2VTbd-T");
 
@@ -152,7 +208,7 @@ async function searchAliExpress(searchItem, browser) {
   await page.click(".price--ok--30GSiFy");
   console.log("Ok Click");
 
-  await delay(3100);
+  await delay(4000);
   await page.waitForSelector(".search-item-card-wrapper-gallery");
 
   const items = await page.$$(".search-item-card-wrapper-gallery");
@@ -168,6 +224,12 @@ async function searchAliExpress(searchItem, browser) {
       let prodReviews = null;
       let productImgLink = "";
       let salePrice = "";
+
+      function priceToDollar(ruppeePrice) {
+        const dollarPrice = ruppeePrice / 278;
+
+        return parseFloat(dollarPrice.toFixed(2));
+      }
 
       try {
         prodLink = el.querySelector(".search-card-item").getAttribute("href");
@@ -228,6 +290,7 @@ async function searchAliExpress(searchItem, browser) {
 
       if (salePrice) {
         prodPrice = parseInt(salePrice);
+        prodPrice = priceToDollar(prodPrice);
       }
 
       return {
@@ -236,6 +299,7 @@ async function searchAliExpress(searchItem, browser) {
         prodPrice,
         prodReviews,
         productImgLink,
+        originSite: "ALIEXPRESS",
       };
     }, item);
 
@@ -247,22 +311,16 @@ async function searchAliExpress(searchItem, browser) {
       ProductsInfo.push(singleItem);
     }
   }
-
-  console.log(ProductsInfo);
-
-  await browser.close();
   return ProductsInfo;
 }
 
 async function searchDaraz(searchItem, browser) {
-  const { itemName, minPrice, maxPrice } = searchItem;
+  let { itemName, minPrice, maxPrice } = searchItem;
 
-  const browser = await puppeteer.launch({
-    headless: false,
-    executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe",
-    userDataDir:
-      "C:/Users/Muhammad Haseeb/AppData/Local/Google/Chrome/User Data/Profile 3",
-  });
+  minPrice = priceToRuppee(minPrice);
+  maxPrice = priceToRuppee(maxPrice);
+
+  console.log("Daraz", minPrice, maxPrice);
 
   const page = await browser.newPage();
 
@@ -289,10 +347,9 @@ async function searchDaraz(searchItem, browser) {
   await page.click(".ant-btn.filter-price__btn--F4CmC.ant-btn-primary");
 
   await page.waitForNavigation({ waitUntil: "networkidle2" });
-
-  await delay(1500);
-
   await page.waitForSelector('[data-qa-locator="product-item"]');
+
+  await delay(4000);
 
   const products = await page.$$('[data-qa-locator="product-item"]');
   console.log("waiting for img");
@@ -304,13 +361,19 @@ async function searchDaraz(searchItem, browser) {
   let prevProdLink = "";
 
   for (const product of products) {
-    const singleProduct = await page.evaluate((el) => {
+    const singleProduct = await page.evaluate(async (el) => {
       let prodPrice = null;
       let prodLink = "";
       let productTitle = "";
       let prodReviews = null;
       let productImgLink = "";
       let salePrice = "";
+
+      function priceToDollar(ruppeePrice) {
+        const dollarPrice = ruppeePrice / 278;
+
+        return parseFloat(dollarPrice.toFixed(2));
+      }
 
       try {
         prodLink = el.querySelector("#id-a-link").getAttribute("href");
@@ -331,9 +394,16 @@ async function searchDaraz(searchItem, browser) {
       }
 
       try {
-        prodPrice = el.querySelector(".currency--GVKjl").innerHTML;
+        let prodPriceStr = el.querySelector(".currency--GVKjl").innerHTML;
+        prodPriceStr = prodPriceStr.replace(/,/g, "");
+
+        prodPrice = parseInt(prodPriceStr);
+        prodPrice = priceToDollar(prodPrice);
+
+        console.log(prodPrice);
       } catch (error) {
         console.log("Did not get the price");
+        return null;
       }
 
       if (!prodLink || !productImgLink || !productTitle) return null;
@@ -344,6 +414,7 @@ async function searchDaraz(searchItem, browser) {
         productTitle,
         prodPrice,
         prodReviews: null,
+        originSite: "DARAZ",
       };
     }, product);
 
@@ -355,20 +426,7 @@ async function searchDaraz(searchItem, browser) {
 
     if (singleProduct) ProductsInfo.push(singleProduct);
   }
-
-  console.log(ProductsInfo);
-
   return ProductsInfo;
 }
 
-const productInfo = {
-  prodName: "Flashlight",
-  minPrice: 500,
-  maxPrice: 2000,
-};
-
-visitDaraz();
-
-// visitAliExpress(productInfo);
-
-// searchWithPrice();
+startScrapping();
