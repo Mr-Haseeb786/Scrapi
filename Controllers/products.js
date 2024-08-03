@@ -27,11 +27,12 @@ async function handleSearchProducts(req, res) {
   //   return res.json({ products: productList });
   // }
 
-  console.log("Passed DB Check");
   const { allProducts, error } = await startScrapping(
     searchItem,
     sitesToSearch
   );
+
+  // setting in cache
 
   // if (allProducts.length !== 0) {
   //   setInCache(itemToSearch.toLowerCase(), sites, allProducts);

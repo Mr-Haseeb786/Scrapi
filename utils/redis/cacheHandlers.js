@@ -8,7 +8,7 @@ async function setInCache(productName, sites, searchedProductsArray) {
       searchedProductsArray
     );
 
-    await redisClient.expire(`products:${productName}`, 90);
+    await redisClient.expire(`products:${sites}:${productName}`, 300);
   } catch (error) {
     console.log(error);
   }

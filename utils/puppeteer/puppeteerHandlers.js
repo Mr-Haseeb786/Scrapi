@@ -1,5 +1,6 @@
 const { executablePath } = require("puppeteer");
 const puppeteer = require("puppeteer-extra");
+const { v4: uuidv4 } = require("uuid");
 
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 puppeteer.use(StealthPlugin());
@@ -10,29 +11,33 @@ function delay(time) {
   });
 }
 
+function genUid() {
+  const id = uuidv4();
+  return genUid;
+}
+
 async function startScrapping(itemToSearch, sitesToSearch) {
   console.log("Started");
 
-  let error = "Could not get Products from: ";
+  let errorMsg = "Could not get Products from: ";
 
   const browser = await puppeteer.launch({
-    headless: false,
+    headless: true,
     executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe",
     userDataDir:
       "C:/Users/Muhammad Haseeb/AppData/Local/Google/Chrome/User Data/Profile 3",
   });
 
   let allProducts = [];
+  let num = 0;
 
   // Searching Amazon
 
   if (sitesToSearch.includes("AMAZON")) {
     console.log("Searching Amazon");
-    retries = 0;
 
     try {
       const productsData = await searchAmazon(itemToSearch, browser);
-
       if (productsData && Array.isArray(productsData)) {
         productsData.map((prod) => {
           allProducts.push(prod);
@@ -40,7 +45,7 @@ async function startScrapping(itemToSearch, sitesToSearch) {
       }
     } catch (error) {
       console.log(error);
-      error = error.concat("Amazon ");
+      errorMsg = errorMsg.concat("Amazon ");
     }
   }
 
@@ -51,17 +56,22 @@ async function startScrapping(itemToSearch, sitesToSearch) {
 
     try {
       const productsData = await searchAliExpress(itemToSearch, browser);
-
+      num = 0;
       if (productsData && Array.isArray(productsData)) {
         console.log("prodsDta is Array");
 
         productsData.map((singleProduct) => {
-          allProducts.push(singleProduct);
+          if (num % 3 === 0) {
+            allProducts.push(singleProduct);
+          } else {
+            allProducts.unshift(singleProduct);
+          }
+          num++;
         });
       }
     } catch (error) {
       console.log(error);
-      error = error.concat("AliExpress");
+      errorMsg = errorMsg.concat("AliExpress");
     }
   }
 
@@ -72,21 +82,27 @@ async function startScrapping(itemToSearch, sitesToSearch) {
 
     try {
       const productsData = await searchDaraz(itemToSearch, browser);
+      num = 0;
       if (productsData && Array.isArray(productsData)) {
         console.log("prodsDta is Array");
 
         productsData.map((singleProduct) => {
-          allProducts.push(singleProduct);
+          if (num % 5 === 0) {
+            allProducts.unshift(singleProduct);
+          } else {
+            allProducts.push(singleProduct);
+          }
+          num++;
         });
       }
     } catch (error) {
-      error = error.concat("Daraz");
+      errorMsg = errorMsg.concat("Daraz");
     }
   }
 
   await browser.close();
 
-  return { allProducts, error };
+  return { allProducts, errorMsg };
 }
 
 function priceToRuppee(dollarPrice) {
@@ -124,7 +140,7 @@ async function searchAmazon(searchItem, browser) {
   await delay(500);
   await page.click('[aria-label="Go - Submit price range"]');
 
-  await delay(1000);
+  await delay(3000);
 
   await page.waitForSelector(".s-card-container");
   await page.waitForSelector(".s-image");
@@ -141,6 +157,11 @@ async function searchAmazon(searchItem, browser) {
       let prodReveiws = null;
       let productImgLink = "";
       let prodRatings = null;
+
+      function genUid() {
+        const id = uuidv4();
+        return id;
+      }
 
       try {
         productImgLink = el.querySelector(".s-image").getAttribute("src");
@@ -200,7 +221,8 @@ async function searchAmazon(searchItem, browser) {
       }
 
       return {
-        productLink,
+        prodId: genUid(),
+        prodLink: productLink,
         productTitle,
         productImgLink,
         prodPrice,
@@ -285,6 +307,11 @@ async function searchAliExpress(searchItem, browser) {
         return parseFloat(dollarPrice.toFixed(2));
       }
 
+      function genUid() {
+        const id = uuidv4();
+        return id;
+      }
+
       try {
         prodLink = el.querySelector(".search-card-item").getAttribute("href");
       } catch (error) {
@@ -348,6 +375,7 @@ async function searchAliExpress(searchItem, browser) {
       }
 
       return {
+        prodId: genUid(),
         prodLink,
         productTitle,
         productImgLink,
@@ -428,6 +456,11 @@ async function searchDaraz(searchItem, browser) {
         return parseFloat(dollarPrice.toFixed(2));
       }
 
+      function genUid() {
+        const id = uuidv4();
+        return id;
+      }
+
       try {
         prodLink = el.querySelector("#id-a-link").getAttribute("href");
       } catch (error) {
@@ -462,6 +495,7 @@ async function searchDaraz(searchItem, browser) {
       if (!prodLink || !productImgLink || !productTitle) return null;
 
       return {
+        prodId: genUid(),
         prodLink,
         productTitle,
         productImgLink,
