@@ -26,6 +26,7 @@ async function getFromCache(productName, sites) {
     return results;
   } catch (error) {
     console.log(error);
+    return null;
   }
 }
 

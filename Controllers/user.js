@@ -129,23 +129,23 @@ async function handleGetUserFavourites(req, res) {
 
 async function handleSetUserFavourites(req, res) {
   const {
-    title,
-    imgLink,
-    price,
-    linkToProduct,
-    producOriginSite,
-    reviews,
-    ratings,
+    productTitle,
+    productImgLink,
+    prodPrice,
+    prodLink,
+    originSite,
+    prodReviews,
+    prodRatings,
   } = req.body;
 
+  console.log(req.body);
+
   if (
-    !title ||
-    !imgLink ||
-    !price ||
-    !linkToProduct ||
-    !producOriginSite ||
-    !reviews ||
-    !ratings
+    !productTitle ||
+    !productImgLink ||
+    !prodPrice ||
+    !prodLink ||
+    !originSite
   ) {
     return res.status(400).json({ error: "Product Details are missing" });
   }

@@ -21,11 +21,11 @@ async function handleSearchProducts(req, res) {
 
   console.log(sites);
 
-  // const productList = await getFromCache(itemToSearch.toLowerCase(), sites);
+  const productList = await getFromCache(itemToSearch.toLowerCase(), sites);
 
-  // if (productList) {
-  //   return res.json({ products: productList });
-  // }
+  if (productList) {
+    return res.json({ products: productList });
+  }
 
   const { allProducts, error } = await startScrapping(
     searchItem,
@@ -34,9 +34,9 @@ async function handleSearchProducts(req, res) {
 
   // setting in cache
 
-  // if (allProducts.length !== 0) {
-  //   setInCache(itemToSearch.toLowerCase(), sites, allProducts);
-  // }
+  if (allProducts.length !== 0) {
+    setInCache(itemToSearch.toLowerCase(), sites, allProducts);
+  }
 
   console.log(error);
   res.json({ message: "Got it!", products: allProducts });

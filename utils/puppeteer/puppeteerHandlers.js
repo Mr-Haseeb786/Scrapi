@@ -11,18 +11,13 @@ function delay(time) {
   });
 }
 
-function genUid() {
-  const id = uuidv4();
-  return genUid;
-}
-
 async function startScrapping(itemToSearch, sitesToSearch) {
   console.log("Started");
 
   let errorMsg = "Could not get Products from: ";
 
   const browser = await puppeteer.launch({
-    headless: true,
+    headless: false,
     executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe",
     userDataDir:
       "C:/Users/Muhammad Haseeb/AppData/Local/Google/Chrome/User Data/Profile 3",
@@ -44,7 +39,7 @@ async function startScrapping(itemToSearch, sitesToSearch) {
         });
       }
     } catch (error) {
-      console.log(error);
+      console.log("Got an error: ", error);
       errorMsg = errorMsg.concat("Amazon ");
     }
   }
@@ -100,13 +95,19 @@ async function startScrapping(itemToSearch, sitesToSearch) {
     }
   }
 
-  await browser.close();
+  // await browser.close();
+  console.log(allProducts);
 
   return { allProducts, errorMsg };
 }
 
 function priceToRuppee(dollarPrice) {
   return dollarPrice * 279;
+}
+
+function genUid() {
+  const id = uuidv4();
+  return id;
 }
 
 async function searchAmazon(searchItem, browser) {
@@ -140,32 +141,31 @@ async function searchAmazon(searchItem, browser) {
   await delay(500);
   await page.click('[aria-label="Go - Submit price range"]');
 
-  await delay(3000);
+  await delay(4000);
 
   await page.waitForSelector(".s-card-container");
   await page.waitForSelector(".s-image");
+  await page.exposeFunction("generateUid", genUid);
   const titleDivs = await page.$$(".s-card-container");
 
   let titleArray = [];
   let prevProdLink = "";
 
   for (const titleDiv of titleDivs) {
-    const singleProduct = await page.evaluate((el) => {
+    const singleProduct = await page.evaluate(async (el) => {
       let prodPrice = null;
       let productLink = "";
       let productTitle = "";
-      let prodReveiws = null;
+      let prodReviews = null;
       let productImgLink = "";
       let prodRatings = null;
-
-      function genUid() {
-        const id = uuidv4();
-        return id;
-      }
+      let prodId = "";
 
       try {
         productImgLink = el.querySelector(".s-image").getAttribute("src");
-      } catch (error) {}
+      } catch (error) {
+        console.log(error);
+      }
 
       if (!productImgLink) return null;
 
@@ -173,7 +173,9 @@ async function searchAmazon(searchItem, browser) {
         productLink = el
           .querySelector("div > div > span > a")
           .getAttribute("href");
-      } catch (error) {}
+      } catch (error) {
+        console.log(error);
+      }
 
       if (!productLink) return null;
 
@@ -184,7 +186,9 @@ async function searchAmazon(searchItem, browser) {
         productTitle = el.querySelector(
           '[data-cy="title-recipe"] > h2 > a > span'
         ).textContent;
-      } catch (error) {}
+      } catch (error) {
+        console.log(error);
+      }
 
       if (!productTitle) return null;
 
@@ -194,7 +198,11 @@ async function searchAmazon(searchItem, browser) {
         ).textContent;
 
         prodPrice = parseFloat(prodPriceString.split("$")[1]);
-      } catch (error) {}
+      } catch (error) {
+        console.log(error);
+      }
+
+      if (!prodPrice) return null;
 
       try {
         let prodRatingsString = el.querySelector(
@@ -214,30 +222,37 @@ async function searchAmazon(searchItem, browser) {
 
         prodReviewsString = prodReviewsString.split(" ")[0];
         prodReviewsString = prodReviewsString.replace(/,/g, "");
-
-        prodReveiws = parseInt(prodReviewsString);
+        prodReviews = parseInt(prodReviewsString);
       } catch (error) {
         console.log(error);
       }
 
+      try {
+        prodId = await generateUid();
+        console.log(prodId);
+      } catch (error) {
+        console.log(error);
+        prodId = null;
+      }
+
       return {
-        prodId: genUid(),
+        prodId,
         prodLink: productLink,
         productTitle,
         productImgLink,
         prodPrice,
         prodRatings,
-        prodReveiws,
+        prodReviews,
         originSite: "AMAZON",
       };
     }, titleDiv);
 
     if (singleProduct) {
-      if (prevProdLink === singleProduct.productLink) continue;
-
-      prevProdLink = singleProduct.productLink;
-
-      titleArray.push(singleProduct);
+      if (prevProdLink !== singleProduct.prodLink) {
+        console.log(singleProduct);
+        prevProdLink = singleProduct.prodLink;
+        titleArray.push(singleProduct);
+      }
     }
   }
 
@@ -288,12 +303,14 @@ async function searchAliExpress(searchItem, browser) {
   await page.waitForSelector(".search-item-card-wrapper-gallery");
 
   const items = await page.$$(".search-item-card-wrapper-gallery");
+  await page.exposeFunction("generateUid", genUid);
 
   let ProductsInfo = [];
   let prevProdLink = "";
 
   for (const item of items) {
-    const singleItem = await page.evaluate((el) => {
+    const singleItem = await page.evaluate(async (el) => {
+      let prodId = await generateUid();
       let prodPrice = null;
       let prodLink = "";
       let productTitle = "";
@@ -305,11 +322,6 @@ async function searchAliExpress(searchItem, browser) {
         const dollarPrice = ruppeePrice / 278;
 
         return parseFloat(dollarPrice.toFixed(2));
-      }
-
-      function genUid() {
-        const id = uuidv4();
-        return id;
       }
 
       try {
@@ -375,7 +387,7 @@ async function searchAliExpress(searchItem, browser) {
       }
 
       return {
-        prodId: genUid(),
+        prodId,
         prodLink,
         productTitle,
         productImgLink,
@@ -407,7 +419,7 @@ async function searchDaraz(searchItem, browser) {
 
   const page = await browser.newPage();
 
-  await page.setDefaultNavigationTimeout(90000);
+  await page.setDefaultNavigationTimeout(30000);
 
   await page.goto(`https://www.daraz.pk/`, { waitUntil: "networkidle2" });
 
@@ -419,17 +431,22 @@ async function searchDaraz(searchItem, browser) {
   await page.click(".search-box__button--1oH7");
   await page.waitForNavigation({ waitUntil: "networkidle2" });
 
-  await page.waitForSelector('input[placeholder="Min"]');
-  await page.waitForSelector('input[placeholder="Max"]');
+  try {
+    await page.waitForSelector('input[placeholder="Min"]');
+    await page.waitForSelector('input[placeholder="Max"]');
 
-  await page.type('input[placeholder="Min"]', `${minPrice}`);
-  await page.type('input[placeholder="Max"]', `${maxPrice}`);
+    await page.type('input[placeholder="Min"]', `${minPrice}`);
+    await page.type('input[placeholder="Max"]', `${maxPrice}`);
 
-  await delay(700);
+    await delay(700);
 
-  await page.click(".ant-btn.filter-price__btn--F4CmC.ant-btn-primary");
+    await page.click(".ant-btn.filter-price__btn--F4CmC.ant-btn-primary");
 
-  await page.waitForNavigation({ waitUntil: "networkidle2" });
+    await page.waitForNavigation({ waitUntil: "networkidle2" });
+  } catch (error) {
+    console.log(error);
+  }
+
   await page.waitForSelector('[data-qa-locator="product-item"]');
 
   await delay(4000);
@@ -438,6 +455,7 @@ async function searchDaraz(searchItem, browser) {
   console.log("waiting for img");
 
   await page.waitForSelector("#id-img");
+  await page.exposeFunction("generateUid", genUid);
 
   let ProductsInfo = [];
 
@@ -445,6 +463,7 @@ async function searchDaraz(searchItem, browser) {
 
   for (const product of products) {
     const singleProduct = await page.evaluate(async (el) => {
+      let prodId = await generateUid();
       let prodPrice = null;
       let prodLink = "";
       let productTitle = "";
@@ -454,11 +473,6 @@ async function searchDaraz(searchItem, browser) {
         const dollarPrice = ruppeePrice / 278;
 
         return parseFloat(dollarPrice.toFixed(2));
-      }
-
-      function genUid() {
-        const id = uuidv4();
-        return id;
       }
 
       try {
@@ -495,7 +509,7 @@ async function searchDaraz(searchItem, browser) {
       if (!prodLink || !productImgLink || !productTitle) return null;
 
       return {
-        prodId: genUid(),
+        prodId,
         prodLink,
         productTitle,
         productImgLink,
