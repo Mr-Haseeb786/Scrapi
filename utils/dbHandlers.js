@@ -27,23 +27,23 @@ async function getUserByEmail(email) {
 
 async function addFavourites(userId, prodInfo) {
   const {
-    title,
-    imgLink,
-    price,
-    linkToProduct,
-    producOriginSite,
-    reviews,
-    ratings,
+    productTitle,
+    productImgLink,
+    prodPrice,
+    prodLink,
+    originSite,
+    prodReviews,
+    prodRatings,
   } = prodInfo;
 
   const favProd = await favProductsModel.create({
-    title,
-    imgLink,
-    price,
-    linkToProduct,
-    producOriginSite,
-    reviews,
-    ratings,
+    productTitle,
+    productImgLink,
+    prodPrice,
+    prodLink,
+    originSite,
+    prodReviews,
+    prodRatings,
     favouritedBy: userId,
   });
 

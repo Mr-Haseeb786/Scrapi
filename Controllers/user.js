@@ -138,7 +138,7 @@ async function handleSetUserFavourites(req, res) {
     prodRatings,
   } = req.body;
 
-  console.log(req.body);
+  console.log("Request Body", req.body);
 
   if (
     !productTitle ||
@@ -173,6 +173,7 @@ async function handleSetUserFavourites(req, res) {
       .status(201)
       .json({ message: "Added to Favourites", favProduct: favProduct._id });
   } catch (error) {
+    console.log(error);
     res.json({ error: "There was an error inserting in db" });
   }
 }

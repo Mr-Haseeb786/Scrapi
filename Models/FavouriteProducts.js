@@ -2,32 +2,30 @@ const { Schema, model } = require("mongoose");
 
 const favProductsSchema = new Schema(
   {
-    title: {
+    productTitle: {
       type: String,
       required: true,
     },
-    imgLink: {
+    productImgLink: {
       type: String,
       required: true,
     },
-    price: {
+    prodPrice: {
       type: Number,
     },
-    linkToProduct: {
+    prodLink: {
       type: String,
       required: true,
     },
-    producOriginSite: {
+    originSite: {
       type: String,
       required: true,
     },
-    reviews: {
+    prodReviews: {
       type: Number,
-      required: true,
     },
-    ratings: {
+    prodRatings: {
       type: Number,
-      required: true,
     },
     favouritedBy: {
       type: Schema.Types.ObjectId,

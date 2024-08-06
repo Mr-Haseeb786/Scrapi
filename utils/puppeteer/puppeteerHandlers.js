@@ -95,9 +95,7 @@ async function startScrapping(itemToSearch, sitesToSearch) {
     }
   }
 
-  // await browser.close();
-  console.log(allProducts);
-
+  await browser.close();
   return { allProducts, errorMsg };
 }
 
@@ -112,6 +110,8 @@ function genUid() {
 
 async function searchAmazon(searchItem, browser) {
   const { itemName, minPrice, maxPrice } = searchItem;
+
+  console.log(minPrice, maxPrice);
 
   const page = await browser.newPage();
 
@@ -429,20 +429,22 @@ async function searchDaraz(searchItem, browser) {
   await delay(900);
 
   await page.click(".search-box__button--1oH7");
-  await page.waitForNavigation({ waitUntil: "networkidle2" });
 
   try {
     await page.waitForSelector('input[placeholder="Min"]');
     await page.waitForSelector('input[placeholder="Max"]');
 
-    await page.type('input[placeholder="Min"]', `${minPrice}`);
-    await page.type('input[placeholder="Max"]', `${maxPrice}`);
+    await page.type('input[placeholder="Min"]', `${maxPrice}`);
+    await page.type('input[placeholder="Max"]', `${minPrice}`);
 
     await delay(700);
 
-    await page.click(".ant-btn.filter-price__btn--F4CmC.ant-btn-primary");
+    await page.waitForSelector(".ant-btn");
+    const button = await page.$(".ant-btn");
 
-    await page.waitForNavigation({ waitUntil: "networkidle2" });
+    await page.click(".ant-btn");
+
+    await delay(1500);
   } catch (error) {
     console.log(error);
   }
@@ -452,9 +454,8 @@ async function searchDaraz(searchItem, browser) {
   await delay(4000);
 
   const products = await page.$$('[data-qa-locator="product-item"]');
-  console.log("waiting for img");
 
-  await page.waitForSelector("#id-img");
+  await page.waitForSelector(".picture-wrapper");
   await page.exposeFunction("generateUid", genUid);
 
   let ProductsInfo = [];
@@ -476,25 +477,33 @@ async function searchDaraz(searchItem, browser) {
       }
 
       try {
-        prodLink = el.querySelector("#id-a-link").getAttribute("href");
+        prodLink = el
+          .querySelector('[data-qa-locator="product-item"] > a')
+          .getAttribute("href");
       } catch (error) {
         console.log(error);
       }
 
       try {
-        productImgLink = el.querySelector(".image--Smuib").getAttribute("src");
+        productImgLink = el
+          .querySelector(".picture-wrapper > img")
+          .getAttribute("src");
       } catch (error) {
+        console.log(error);
         console.log("Did not get the img");
       }
 
       try {
-        productTitle = el.querySelector(".image--Smuib").getAttribute("alt");
+        productTitle = el
+          .querySelector(".picture-wrapper > img")
+          .getAttribute("alt");
       } catch (error) {
+        console.log(error);
         console.log("Did not get the title");
       }
 
       try {
-        let prodPriceStr = el.querySelector(".currency--GVKjl").innerHTML;
+        let prodPriceStr = el.querySelector(".ooOxS").innerHTML;
         prodPriceStr = prodPriceStr.replace(/,/g, "");
 
         prodPrice = parseInt(prodPriceStr);
@@ -502,6 +511,7 @@ async function searchDaraz(searchItem, browser) {
 
         console.log(prodPrice);
       } catch (error) {
+        console.log(error);
         console.log("Did not get the price");
         return null;
       }

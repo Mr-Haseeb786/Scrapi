@@ -8,8 +8,8 @@ async function handleSearchProducts(req, res) {
 
   const searchItem = {
     itemName: itemToSearch,
-    minPrice: highPrice,
-    maxPrice: lowPrice,
+    maxPrice: highPrice,
+    minPrice: lowPrice,
   };
 
   // Getting from Cache
