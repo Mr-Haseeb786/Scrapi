@@ -17,7 +17,7 @@ async function startScrapping(itemToSearch, sitesToSearch) {
   let errorMsg = "Could not get Products from: ";
 
   const browser = await puppeteer.launch({
-    headless: false,
+    headless: true,
     executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe",
     userDataDir:
       "C:/Users/Muhammad Haseeb/AppData/Local/Google/Chrome/User Data/Profile 3",

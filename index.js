@@ -18,6 +18,7 @@ connectToRedis();
 
 const app = express();
 
+app.use(express.static("dist"));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json({ extended: true }));
 app.use(cookieParser());
